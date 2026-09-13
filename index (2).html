@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kuis Interaktif PPDB SMP An-Nuriyyah</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); }
+        .wheel-pointer {
+            width: 0; height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 35px solid #ef4444;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-white flex flex-col justify-between p-6">
+
+    <!-- Header -->
+    <header class="text-center my-4">
+        <span class="bg-emerald-500/20 text-emerald-400 px-4 py-1.5 rounded-full text-sm font-semibold tracking-wide border border-emerald-500/30">
+            SOSIALISASI PPDB 2026/2027
+        </span>
+        <h1 class="text-3xl md:text-5xl font-extrabold mt-3 text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-200">
+            SMP AN-NURIYYAH BUMIAYU
+        </h1>
+        <p class="text-slate-400 mt-1 text-sm md:text-base">Putar rodanya, jawab pertanyaannya, dan raih hadiahnya!</p>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-center my-auto">
+        
+        <!-- Spin Wheel Section -->
+        <div class="flex flex-col items-center">
+            <div class="relative flex flex-col items-center">
+                <div class="wheel-pointer z-10 -mb-4 filter drop-shadow-lg"></div>
+                <canvas id="wheel" width="360" height="360" class="rounded-full shadow-2xl border-4 border-slate-700"></canvas>
+            </div>
+            <button id="spin-btn" onclick="spinWheel()" class="mt-6 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold text-lg px-8 py-3 rounded-2xl shadow-lg shadow-emerald-500/30 transform hover:-translate-y-1 transition duration-200">
+                PUTAR RODA!
+            </button>
+        </div>
+
+        <!-- Question & Challenge Display -->
+        <div class="bg-slate-800/80 backdrop-blur-md p-6 rounded-3xl border border-slate-700 shadow-xl min-h-[320px] flex flex-col justify-between">
+            <div>
+                <div class="flex justify-between items-center mb-4">
+                    <span id="category-badge" class="bg-slate-700 text-slate-300 text-xs font-semibold px-3 py-1 rounded-lg">Kategori</span>
+                    <span id="score-display" class="text-xs font-bold text-emerald-400">Poin Hadiah: +10</span>
+                </div>
+                <h2 id="question-title" class="text-xl md:text-2xl font-bold text-slate-100 mb-4">
+                    Tekan tombol "PUTAR RODA" untuk memulai tantangan!
+                </h2>
+                <div id="options-container" class="space-y-3">
+                    <!-- Dynamic Options -->
+                </div>
+            </div>
+            <div id="feedback" class="mt-4 text-center font-bold text-lg hidden"></div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center text-xs text-slate-500 py-4">
+        Kelas Khusus Al-Qur'an (KKQ) & Kelas Reguler SMP An-Nuriyyah Bumiayu
+    </footer>
+
+    <script>
+        const questions = [
+            { category: "Ekstrakurikuler", q: "Salah satu ekstrakurikuler favorit di SMP An-Nuriyyah yang rutin latihan tiap Sabtu adalah...", options: ["Futsal & Seni Tari", "Bulu Tangkis", "Renang", "Pencak Silat"], correct: 0 },
+            { category: "Fasilitas", q: "Kelas Khusus Al-Qur'an (KKQ) di SMP An-Nuriyyah memiliki ruang kelas yang nyaman ber-AC dan dilengkapi...", options: ["Lab Komputer 35 Unit", "Kolam Renang", "Bioskop Mini", "Lapangan Futsal Indoor"], correct: 0 },
+            { category: "Keislaman", q: "Apa nama program kelas unggulan di SMP An-Nuriyyah yang fokus pada pemahaman dan tahfidz Al-Qur'an?", options: ["Kelas Reguler", "Kelas Khusus Al-Qur'an (KKQ)", "Kelas Olahraga", "Kelas Bahasa"], correct: 1 },
+            { category: "Tantangan Seru", q: "Sebutkan dengan lantang jargon SMP An-Nuriyyah Bumiayu bersama teman sebelahmu!", options: ["Siap, Saya Bisa!", "SMP An-Nuriyyah, Keren & Berprestasi!", "Pasti BISA!", "Semangat Pagi!"], correct: 1 },
+            { category: "Pengetahuan", q: "Berapa potongan biaya khusus jika kamu mendaftar di Gelombang 1?", options: ["Rp 50.000", "Rp 100.000", "Rp 150.000", "Rp 200.000"], correct: 1 },
+            { category: "Tantangan Hafalan", q: "Lanjutkan ayat berikut: 'Inna a'thaina kal-kautsar...'", options: ["Fashalli lirabbika wan-har", "Qul huwallahu ahad", "Wadh-dhuha", "Alhamdulillahirabbil 'alamin"], correct: 0 }
+        ];
+
+        const colors = ['#10b981', '#06b6d4', '#f59e0b', '#8b5cf6', '#ec4899', '#3b82f6'];
+        const canvas = document.getElementById('wheel');
+        const ctx = canvas.getContext('2d');
+        let currentAngle = 0;
+        let isSpinning = false;
+
+        function drawWheel() {
+            const numSlices = questions.length;
+            const sliceAngle = (2 * Math.PI) / numSlices;
+
+            for (let i = 0; i < numSlices; i++) {
+                ctx.beginPath();
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.moveTo(180, 180);
+                ctx.arc(180, 180, 170, currentAngle + i * sliceAngle, currentAngle + (i + 1) * sliceAngle);
+                ctx.fill();
+
+                // Draw Text
+                ctx.save();
+                ctx.translate(180, 180);
+                ctx.rotate(currentAngle + i * sliceAngle + sliceAngle / 2);
+                ctx.fillStyle = "white";
+                ctx.font = "bold 13px Poppins";
+                ctx.textAlign = "right";
+                ctx.fillText(`Soal ${i + 1}`, 140, 5);
+                ctx.restore();
+            }
+        }
+
+        drawWheel();
+
+        function spinWheel() {
+            if (isSpinning) return;
+            isSpinning = true;
+            document.getElementById('feedback').classList.add('hidden');
+            
+            const spinAngle = Math.PI * (10 + Math.random() * 10);
+            const duration = 3000;
+            const start = performance.now();
+
+            function animate(now) {
+                const elapsed = now - start;
+                const progress = Math.min(elapsed / duration, 1);
+                const easeOut = 1 - Math.pow(1 - progress, 3);
+                
+                currentAngle = easeOut * spinAngle;
+                drawWheel();
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    isSpinning = false;
+                    selectQuestion();
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+
+        function selectQuestion() {
+            const numSlices = questions.length;
+            const normalizedAngle = (2 * Math.PI - (currentAngle % (2 * Math.PI))) % (2 * Math.PI);
+            const selectedIndex = Math.floor((normalizedAngle / (2 * Math.PI)) * numSlices);
+            
+            const q = questions[selectedIndex];
+            document.getElementById('category-badge').innerText = q.category;
+            document.getElementById('question-title').innerText = q.q;
+
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left bg-slate-700/60 hover:bg-slate-600/80 p-3 rounded-xl border border-slate-600 transition text-sm font-medium";
+                btn.innerText = `${String.fromCharCode(65 + idx)}. ${opt}`;
+                btn.onclick = () => checkAnswer(idx, q.correct);
+                container.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selected, correct) {
+            const feedback = document.getElementById('feedback');
+            feedback.classList.remove('hidden');
+
+            if (selected === correct) {
+                feedback.className = "mt-4 text-center font-bold text-lg text-emerald-400";
+                feedback.innerText = "BENAR! Selamat, kamu dapat hadiah!";
+                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            } else {
+                feedback.className = "mt-4 text-center font-bold text-lg text-rose-400";
+                feedback.innerText = "Hampir tepat! Coba lagi di putaran berikutnya.";
+            }
+        }
+    </script>
+</body>
+</html>
